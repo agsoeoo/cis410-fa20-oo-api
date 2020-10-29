@@ -1,10 +1,58 @@
 const express = require('express')
 const db = require('./dbConnectExec')
 const app = express();
+app.use(express.json())
+const bcrypt = require('bcryptjs')
 
 
 app.get("/hi",(req,res)=>{
     res.send("Hello world")
+
+})
+
+
+app.post("/contacts", async(req,res)=>{
+    // res.send('creating user')
+    // console.log ("request body", req.body)
+
+
+    var nameFirst = req.body.nameFirst;
+    var nameLast = req.body.nameLast;
+    var email = req.body.email;
+    var password = req.body.password;
+
+
+    if(!nameFirst || !nameLast || !email || !password){
+        return res.status(400).send('bad request')
+    }
+
+    nameFirst = nameFirst.replace("'","''")
+    nameLast = nameLast.replace("'","''")
+
+
+    var emailCheckQuery = `SELECT email
+    FROM contact 
+    WHERE email ='${email}'`
+
+    var existingUser = await db.executeQuery(emailCheckQuery)
+
+    // console.log("existing user", existingUser)
+
+    if(existingUser[0]){
+        return res.status(409).send("Please enter a different email.")
+    }
+
+    var hashPassword = bcrypt.hashSync(password)
+
+    var insertQuery = `INSERT INTO contact(NameFirst, NameLast, Email, Password)
+    VALUES('${nameFirst}', '${nameLast}', '${email}', '${hashPassword}')`
+
+    db.executeQuery(insertQuery).then(()=>{res.status(201).send()})
+    .catch((err)=>{
+        console.log('error in POST /contacts',err)
+        res.status(500).send()
+    })
+
 
 })
 
