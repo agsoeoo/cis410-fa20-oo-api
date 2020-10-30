@@ -5,11 +5,26 @@ app.use(express.json())
 const bcrypt = require('bcryptjs')
 
 
-app.get("/hi",(req,res)=>{
-    res.send("Hello world")
+// app.get("/hi",(req,res)=>{
+//     res.send("Hello world")
 
+// })
+
+app.get("/product",(req,res)=>{
+    db.executeQuery(`SELECT [dbo].[Order].CustomerID, [dbo].[Order].OrderID, [dbo].[Order].ProductID, [dbo].[Order].Statue, Customer.Name, Product.Category, Product.Description, Product.Price
+    from [dbo].[Order]
+    JOIN Product ON [dbo].[Order].ProductID= Product.ProductID
+    JOIN Customer ON [dbo].[Order].CustomerID=Customer.CustomerID
+    `)
+        .then((result)=>{
+            res.status(200).send(result)
+    
+        })
+        .catch((err)=>{
+            console.log(err)
+            res.status(500).send()
+        })
 })
-
 
 
 // testing
@@ -74,21 +89,6 @@ app.get("/hi",(req,res)=>{
     
 // })
 
-app.get("/product",(req,res)=>{
-    db.executeQuery(`SELECT [dbo].[Order].CustomerID, [dbo].[Order].OrderID, [dbo].[Order].ProductID, [dbo].[Order].Statue, Customer.Name, Product.Category, Product.Description, Product.Price
-    from [dbo].[Order]
-    JOIN Product ON [dbo].[Order].ProductID= Product.ProductID
-    JOIN Customer ON [dbo].[Order].CustomerID=Customer.CustomerID
-    `)
-        .then((result)=>{
-            res.status(200).send(result)
-    
-        })
-        .catch((err)=>{
-            console.log(err)
-            res.status(500).send()
-        })
-})
 
 
 // app.get("/movies/:pk", (req,res)=>{
