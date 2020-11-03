@@ -13,98 +13,98 @@ const config = require("./config.js")
 // })
 
 
-app.post("/contacts/login", async (req,res)=>{
-    // console.log("/constacts/login called")
-    // console.log(req.body)
+// app.post("/contacts/login", async (req,res)=>{
+//     // console.log("/constacts/login called")
+//     // console.log(req.body)
     
-    var email = req.body.email
-    var password = req.body.password
+//     var email = req.body.email
+//     var password = req.body.password
 
-    if(!email || !password){
-        return res.status(400).send("bad request")
-    }
+//     if(!email || !password){
+//         return res.status(400).send("bad request")
+//     }
 
     //1. check that user email exists in the db
 
-    var query = `SELECT *
-    FROM contact
-    WHERE email ='${email}'`
+    // var query = `SELECT *
+    // FROM contact
+    // WHERE email ='${email}'`
 
     // var result = await db.executeQuery(query);
     
-    let result;
+    // let result;
 
-    try{
-        result = await db.executeQuery(query)
-    }catch(myError){
-        console.log('error /contact/login:',myError);
-        return res.status(500).send()
-    }
+    // try{
+    //     result = await db.executeQuery(query)
+    // }catch(myError){
+    //     console.log('error /contact/login:',myError);
+    //     return res.status(500).send()
+    // }
 
-    // console.log(result)
+    // // console.log(result)
 
-    if(!result[0]){return res.status(400).send('Invalid user credentials')}
+    // if(!result[0]){return res.status(400).send('Invalid user credentials')}
 
     // 2. check their password matches
 
-    let user = result[0]
-    // console.log(user)
+    // let user = result[0]
+    // // console.log(user)
 
-    if(!bcrypt.compareSync(password, user.Password)){
-        console.log('invalid password');
-        return res.status(400).send("Invalid user credentials")
-    }
+    // if(!bcrypt.compareSync(password, user.Password)){
+    //     console.log('invalid password');
+    //     return res.status(400).send("Invalid user credentials")
+    // }
 
     // 3. generate a token 
     
-    let token = jwt.sign({pk: user.ContactPK}, config.JWT, {expiresIn: '60 minutes'})
+    // let token = jwt.sign({pk: user.ContactPK}, config.JWT, {expiresIn: '60 minutes'})
     
     // console.log(token)
 
     // 4. save the token in db and send token and user info back to user
 
-    let setTokenQuery = `UPDATE Contact 
-    Set Token = '${token}'
-    Where ContactPK = ${user.ContactPK}`
+//     let setTokenQuery = `UPDATE Contact 
+//     Set Token = '${token}'
+//     Where ContactPK = ${user.ContactPK}`
 
     
-try{
-    await db.executeQuery(setTokenQuery)
+// try{
+//     await db.executeQuery(setTokenQuery)
 
-    res.status(200).send({
-        token: token, 
-        user: {
-            NameFirst: user.NameFirst, 
-            NameLast: user.NameLast,
-            Email: user.Email,
-            ContactPK: user.ContactPK
+//     res.status(200).send({
+//         token: token, 
+//         user: {
+//             NameFirst: user.NameFirst, 
+//             NameLast: user.NameLast,
+//             Email: user.Email,
+//             ContactPK: user.ContactPK
 
-        }
+//         }
 
-    })
-}catch(myError){
-    console.log("Error setting user token". myError);
-    res.status(500).send()
-}
+//     })
+// }catch(myError){
+//     console.log("Error setting user token". myError);
+//     res.status(500).send()
+// }
     
 
-})
-
-// app.get("/product",(req,res)=>{
-//     db.executeQuery(`SELECT [dbo].[Order].CustomerID, [dbo].[Order].OrderID, [dbo].[Order].ProductID, [dbo].[Order].Statue, Customer.Name, Product.Category, Product.Description, Product.Price
-//     from [dbo].[Order]
-//     JOIN Product ON [dbo].[Order].ProductID= Product.ProductID
-//     JOIN Customer ON [dbo].[Order].CustomerID=Customer.CustomerID
-//     `)
-//         .then((result)=>{
-//             res.status(200).send(result)
-    
-//         })
-//         .catch((err)=>{
-//             console.log(err)
-//             res.status(500).send()
-//         })
 // })
+
+app.get("/product",(req,res)=>{
+    db.executeQuery(`SELECT [dbo].[Order].CustomerID, [dbo].[Order].OrderID, [dbo].[Order].ProductID, [dbo].[Order].Statue, Customer.Name, Product.Category, Product.Description, Product.Price
+    from [dbo].[Order]
+    JOIN Product ON [dbo].[Order].ProductID= Product.ProductID
+    JOIN Customer ON [dbo].[Order].CustomerID=Customer.CustomerID
+    `)
+        .then((result)=>{
+            res.status(200).send(result)
+    
+        })
+        .catch((err)=>{
+            console.log(err)
+            res.status(500).send()
+        })
+})
 
 
 
