@@ -1,0 +1,8 @@
+{
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ],
+    "appService.deploySubpath": ".",
+    "appService.defaultWebAppToDeploy": "/subscriptions/2afda610-8dfc-41a8-8f81-be3580e6978b/resourceGroups/appsvc_linux_centralus/providers/Microsoft.Web/sites/cis410-fa20-oo-api"
+}

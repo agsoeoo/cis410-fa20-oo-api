@@ -1,207 +1,275 @@
 const express = require('express')
-const db = require('./dbConnectExec')
+const db = require('./dbConnectExec.js')
 const app = express();
 app.use(express.json())
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const config = require("./config.js")
+const config = require("./config")
+const auth=require('./middleware2/authenticate')
+const cors = require('cors');
+// const { NText } = require('mssql');
+// const config = require('./config')
+app.use(cors())
 
 
-// app.get("/hi",(req,res)=>{
-//     res.send("Hello world")
-
-// })
 
 
-// app.post("/contacts/login", async (req,res)=>{
-//     // console.log("/constacts/login called")
-//     // console.log(req.body)
+// products
+app.get("/products",(req,res)=>{
+    db.executeQuery(`select ProductT.ProductID, ProductT.productName, ProductT.productPrice, CategoryT.CategoryID, CategoryT.CategoryName
+    from productT 
+    left join CategoryT
+    ON CategoryT.CategoryID = ProductT.CategoryID
+`)
+    .then((result)=>{
+        res.status(200).send(result)
+
+    })
+    .catch((err)=>{
+        console.log(err)
+        res.status(500).send()
+    })
     
-//     var email = req.body.email
-//     var password = req.body.password
+})
 
-//     if(!email || !password){
-//         return res.status(400).send("bad request")
-//     }
 
-    //1. check that user email exists in the db
+app.get("/products/:pk", (req,res)=>{
+    var pk = req.params.pk
+    console.log("my PK:", pk)
+  
+db.executeQuery(`select productT.productID, ProductT.productName, ProductT.productPrice, ProductT.CategoryID, CategoryT.CategoryName
+from ProductT
+left join CategoryT
+ON CategoryT.ProductID = ProductT.CategoryID
+Where ProductT.ProductID = ${pk}`)
+.then((result)=>{
+    res.status(200).send(result)
+})
+.catch((err)=>{
+    console.log(err)
+    res.status(500).send()
+})
 
-    // var query = `SELECT *
-    // FROM contact
-    // WHERE email ='${email}'`
+
+  
+})
+
+
+
+//contacts POST
+app.post("/contacts", async(req,res)=>{
+    // res.send('creating user')
+    // console.log ("request body", req.body)
+
+    var nameFirst = req.body.nameFirst;
+    var nameLast = req.body.nameLast;
+    var email = req.body.email;
+    var password = req.body.password;
+
+
+    if(!nameFirst || !nameLast || !email || !password){
+        return res.status(400).send('bad request')
+    }
+
+    nameFirst = nameFirst.replace("'","''")
+    nameLast = nameLast.replace("'","''")
+
+
+    var emailCheckQuery = `SELECT email
+    FROM CustomerT
+    WHERE email ='${email}'`
+
+    var existingUser = await db.executeQuery(emailCheckQuery)
+
+    // console.log("existing user", existingUser)
+
+    if(existingUser[0]){
+        return res.status(409).send("Please enter a different email.")
+    }
+
+    var hashPassword = bcrypt.hashSync(password)
+
+    var insertQuery = `INSERT INTO customerT(NameFirst, NameLast, Email, Password)
+    VALUES('${nameFirst}', '${nameLast}', '${email}', '${hashPassword}')`
+
+    db.executeQuery(insertQuery).then(()=>{res.status(201).send()})
+    .catch((err)=>{
+        console.log('error in POST /contacts',err)
+        res.status(500).send()
+    })
+
+
+})
+
+
+//LOGIN GET 
+
+app.post("/contacts/login", async (req,res)=>{
+    // console.log("/constacts/login called")
+    // console.log(req.body)
+    
+    var email = req.body.email
+    var password = req.body.password
+
+    if(!email || !password){
+        return res.status(400).send("bad request")
+    }
+
+    // 1. check that user email exists in the db
+
+    var query = `SELECT *
+    FROM customerT
+    WHERE email ='${email}'`
 
     // var result = await db.executeQuery(query);
     
-    // let result;
+    let result;
 
-    // try{
-    //     result = await db.executeQuery(query)
-    // }catch(myError){
-    //     console.log('error /contact/login:',myError);
-    //     return res.status(500).send()
-    // }
+    try{
+        result = await db.executeQuery(query)
+    }catch(myError){
+        console.log('error /contacts/login:',myError);
+        return res.status(500).send()
+    }
 
-    // // console.log(result)
+    // console.log(result)
 
-    // if(!result[0]){return res.status(400).send('Invalid user credentials')}
+    if(!result[0]){return res.status(400).send('Invalid user credentials')}
 
-    // 2. check their password matches
+//     // 2. check their password matches
 
-    // let user = result[0]
-    // // console.log(user)
+    let user = result[0]
+//     // console.log(user)
+   
 
-    // if(!bcrypt.compareSync(password, user.Password)){
-    //     console.log('invalid password');
-    //     return res.status(400).send("Invalid user credentials")
-    // }
+    if(!bcrypt.compareSync(password, user.Password)){
+        console.log('invalid password');
+        return res.status(400).send("Invalid user credentials")
+    }
 
-    // 3. generate a token 
+//     // 3. generate a token 
     
-    // let token = jwt.sign({pk: user.ContactPK}, config.JWT, {expiresIn: '60 minutes'})
+    let token = jwt.sign({pk: user.CustomerID}, config.JWT, {expiresIn: '60 minutes'})
     
-    // console.log(token)
+    console.log(token)
+ 
 
-    // 4. save the token in db and send token and user info back to user
+//     // 4. save the token in db and send token and user info back to user
 
-//     let setTokenQuery = `UPDATE Contact 
-//     Set Token = '${token}'
-//     Where ContactPK = ${user.ContactPK}`
+    let setTokenQuery = `UPDATE customerT
+    SET Token = '${token}'
+    Where CustomerID = ${user.CustomerID}`
 
     
-// try{
-//     await db.executeQuery(setTokenQuery)
+try{
+    await db.executeQuery(setTokenQuery)
+    res.status(200).send({
+        token: token, 
+        user: {
+            NameFirst: user.NameFirst, 
+            NameLast: user.NameLast,
+            Email: user.Email,
+            CustomerID: user.CustomerID
 
-//     res.status(200).send({
-//         token: token, 
-//         user: {
-//             NameFirst: user.NameFirst, 
-//             NameLast: user.NameLast,
-//             Email: user.Email,
-//             ContactPK: user.ContactPK
+        }
 
-//         }
+    })
+}catch(myError){
+    console.log("Error setting user token", myError);
+    res.status(500).send()
+}
+    
 
-//     })
-// }catch(myError){
-//     console.log("Error setting user token". myError);
-//     res.status(500).send()
+ })
+
+// const auth = async(req,res,next)=>{
+//     console.log(req.header('Authorization'))
+//     next()
 // }
+
+ app.post("/orders", auth, async (req,res)=>{
+     try{   
+        var productID = req.body.productID
+        var payment = req.body.payment
     
+        if(!productID ||!payment){res.status(400).send("bad request")}
 
-// })
+        payment = payment.replace("'","''")
+       
+        // console.log("Here is the customer in /orders",req.customer)
+        // res.send("Here is your response")}
 
-app.get("/product",(req,res)=>{
-    db.executeQuery(`SELECT [dbo].[Order].CustomerID, [dbo].[Order].OrderID, [dbo].[Order].ProductID, [dbo].[Order].Statue, Customer.Name, Product.Category, Product.Description, Product.Price
-    from [dbo].[Order]
-    JOIN Product ON [dbo].[Order].ProductID= Product.ProductID
-    JOIN Customer ON [dbo].[Order].CustomerID=Customer.CustomerID
-    `)
-        .then((result)=>{
-            res.status(200).send(result)
+        let insertQuery = `INSERT INTO orderT(CustomerID, ProductID, Payment)
+        OUTPUT inserted.OrderID, inserted.CustomerID, inserted.ProductID, inserted.Payment
+        VALUES (${req.customer.CustomerID}, '${productID}','${payment}')`
+
+        let insertedOrder = await db.executeQuery(insertQuery)
+        // console.log(insertedOrder)
+        res.status(201).send(insertedOrder[0])
+
+     }
+     catch(error){
+         console.log("Error is POST /orders", error);
+         res.status(500).send()
+     }
+
+
+ })
+
+ app.get('/contacts/me', auth, (req, res)=>{
+     res.send(req.customer)
+ })
+
+ app.post('/contacts/logout', auth, (req,res)=>{
+
+    var query =`UPDATE CustomerT 
+    SET Token = NULL
+    Where CustomerID = ${req.customer.CustomerID}`
+
+    db.executeQuery(query)
+    .then(()=>{
+        res.status(200).send()
+    })
+    .catch((error)=>{
+        console.log("error in POST /contacts/logout",error)
+        res.status(500).send()
+    })
+
+
+
+ })
+
+ app.get('/orders/me', auth, async(req, res)=>{
+     var CustomerID = req.customer.CustomerID;
     
-        })
-        .catch((err)=>{
-            console.log(err)
-            res.status(500).send()
-        })
-})
-
-
-
-// app.post("/contacts", async(req,res)=>{
-//     // res.send('creating user')
-//     // console.log ("request body", req.body)
-
-
-//     var nameFirst = req.body.nameFirst;
-//     var nameLast = req.body.nameLast;
-//     var email = req.body.email;
-//     var password = req.body.password;
-
-
-//     if(!nameFirst || !nameLast || !email || !password){
-//         return res.status(400).send('bad request')
-//     }
-
-//     nameFirst = nameFirst.replace("'","''")
-//     nameLast = nameLast.replace("'","''")
-
-
-//     var emailCheckQuery = `SELECT email
-//     FROM contact 
-//     WHERE email ='${email}'`
-
-//     var existingUser = await db.executeQuery(emailCheckQuery)
-
-//     // console.log("existing user", existingUser)
-
-//     if(existingUser[0]){
-//         return res.status(409).send("Please enter a different email.")
-//     }
-
-//     var hashPassword = bcrypt.hashSync(password)
-
-//     var insertQuery = `INSERT INTO contact(NameFirst, NameLast, Email, Password)
-//     VALUES('${nameFirst}', '${nameLast}', '${email}', '${hashPassword}')`
-
-//     db.executeQuery(insertQuery).then(()=>{res.status(201).send()})
-//     .catch((err)=>{
-//         console.log('error in POST /contacts',err)
-//         res.status(500).send()
-//     })
-
-
-// })
-
-// app.get("/movies",(req,res)=>{
-//     db.executeQuery(`select * 
-//     from Movie 
-//     left join Genre
-//     ON Genre.GenrePK = Movie.MoviePK`)
-//     .then((result)=>{
-//         res.status(200).send(result)
-
-//     })
-//     .catch((err)=>{
-//         console.log(err)
-//         res.status(500).send()
-//     })
+     db.executeQuery(`select OrderT.OrderID, OrderT.CustomerID, OrderT.ProductID, OrderT.Payment, ProductT.productName
+     from OrderT
+     right join ProductT on OrderT.ProductID = ProductT.ProductID
+     Where CustomerID = ${CustomerID}`)
+     .then((result)=>{
+         res.status(200).send(result)
+     })
+     .catch((error)=>{
+         console.log(error)
+         res.status(500).send()
+     })
     
-// })
+     
+
+ })
+
+ app.patch('/orders/:pk'), auth, async(req, res)=>{
+     let orderID = req.params.pk
+     // make sure that the user can only edit their own reviews
+ }
+
+ app.patch('/orders/:pk'), auth, async(req, res)=>{
+    let orderID = req.params.pk
+    // make sure that the user can only delete their own reviews
+}
 
 
-
-// app.get("/movies/:pk", (req,res)=>{
-//     var pk = req.params.pk
-//     console.log("my PK:", pk)
-
-//      var myQuery = `select * 
-//      from Movie 
-//      left join Genre
-//      ON Genre.GenrePK = Movie.MoviePK
-//      WHERE moviePK = ${pk}`
-
-//      db.executeQuery(myQuery)
-//      .then((movies)=>{
-//         //  console.log("Movies: ", movies)
-//         if(movies[0]){
-//             res.send(movies[0])
-//         }
-//         else{
-//             res.status(404).send('bad request')
-//         }
-//      })
-//      .catch((err)=>
-//      {
-//          console.log('Error in /movies/pk',err)
-//          res.status(500).send()
-//      })
-// })
-
-
-
-
-app.listen(5000,()=>{
-    console.log("App is running on port 5000")
-})
-
+app.get("/", (req,res)=>{res.send("Hello Word.")})
+const PORT = process.env.PORT || 3000
+app.listen(PORT,()=>{console.log(`App is running on port ${PORT}`)})
+// app.listen(3000,()=>{console.log("App is running on port 3000")})
