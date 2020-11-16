@@ -216,7 +216,7 @@ try{
 
  })
 
- app.get('/contacts/me', auth, (req, res)=>{
+ app.get("/contacts/me", auth, (req, res)=>{
      res.send(req.customer)
  })
 
@@ -239,7 +239,7 @@ try{
 
  })
 
- app.get('/orders/me', auth, async(req, res)=>{
+ app.get("/orders/me", auth, async(req, res)=>{
      var CustomerID = req.customer.CustomerID;
     
      db.executeQuery(`select OrderT.OrderID, OrderT.CustomerID, OrderT.ProductID, OrderT.Payment, ProductT.productName
@@ -269,7 +269,7 @@ try{
 }
 
 
-app.get("/", (req,res)=>{res.send("Hello Word.")})
-const PORT = process.env.PORT || 3000
+app.get("/", (req,res)=>{res.send("Hello World.")})
+const PORT = process.env.PORT || 5000
 app.listen(PORT,()=>{console.log(`App is running on port ${PORT}`)})
 // app.listen(3000,()=>{console.log("App is running on port 3000")})
